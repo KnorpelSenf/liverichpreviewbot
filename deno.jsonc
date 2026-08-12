@@ -6,6 +6,7 @@
   },
   "imports": {
     "@grammyjs/grammy": "jsr:@grammyjs/grammy@2.0.0-beta.7",
+    "@hono/hono": "jsr:@hono/hono@^4.13.1",
     "grammy": "jsr:@grammyjs/grammy@2.0.0-beta.7"
   },
   "deploy": {

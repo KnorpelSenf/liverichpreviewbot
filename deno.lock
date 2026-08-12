@@ -2,7 +2,8 @@
   "version": "5",
   "specifiers": {
     "jsr:@grammyjs/debug@~0.3.1": "0.3.1",
-    "jsr:@grammyjs/grammy@2.0.0-beta.7": "2.0.0-beta.7"
+    "jsr:@grammyjs/grammy@2.0.0-beta.7": "2.0.0-beta.7",
+    "jsr:@hono/hono@^4.13.1": "4.13.1"
   },
   "jsr": {
     "@grammyjs/debug@0.3.1": {
@@ -13,11 +14,15 @@
       "dependencies": [
         "jsr:@grammyjs/debug"
       ]
+    },
+    "@hono/hono@4.13.1": {
+      "integrity": "36e130f7c3a07d2938d0960c3c726e71ff15becdf999512949bc69884b6afb65"
     }
   },
   "workspace": {
     "dependencies": [
-      "jsr:@grammyjs/grammy@2.0.0-beta.7"
+      "jsr:@grammyjs/grammy@2.0.0-beta.7",
+      "jsr:@hono/hono@^4.13.1"
     ]
   }
 }
