@@ -29,14 +29,8 @@ export async function saveMessageIdentifiers(
 ): Promise<void> {
   const key = [KV_PREFIX, format, "messageIdentifiers", id];
   const identifiers: MessageIdentifiers = { chatId, messageId };
-  logKv("set message identifiers: start", { format, id, key });
-  const result = await kv.set(key, identifiers);
-  logKv("set message identifiers: complete", {
-    format,
-    id,
-    key,
-    versionstamp: result.versionstamp,
-  });
+  await kv.set(key, identifiers);
+  logKv("set", "message identifiers", format, id);
 }
 
 export async function loadMessageIdentifiers(
@@ -44,15 +38,14 @@ export async function loadMessageIdentifiers(
   id: string,
 ): Promise<MessageIdentifiers | null> {
   const key = [KV_PREFIX, format, "messageIdentifiers", id];
-  logKv("get message identifiers: start", { format, id, key });
   const result = await kv.get<MessageIdentifiers>(key);
-  logKv("get message identifiers: complete", {
+  logKv(
+    "get",
+    "message identifiers",
     format,
     id,
-    key,
-    hit: result.value !== null,
-    versionstamp: result.versionstamp,
-  });
+    result.value === null ? "miss" : "hit",
+  );
   return result.value;
 }
 
@@ -62,15 +55,8 @@ export async function saveDraft(
   content: string,
 ): Promise<void> {
   const key = [KV_PREFIX, format, "draft", id];
-  logKv("set draft: start", { format, id, key, contentLength: content.length });
-  const result = await kv.set(key, content);
-  logKv("set draft: complete", {
-    format,
-    id,
-    key,
-    contentLength: content.length,
-    versionstamp: result.versionstamp,
-  });
+  await kv.set(key, content);
+  logKv("set", "draft", format, id, `${content.length} chars`);
 }
 
 export async function loadDraft(
@@ -78,19 +64,24 @@ export async function loadDraft(
   id: string,
 ): Promise<string | null> {
   const key = [KV_PREFIX, format, "draft", id];
-  logKv("get draft: start", { format, id, key });
   const result = await kv.get<string>(key);
-  logKv("get draft: complete", {
-    format,
-    id,
-    key,
-    hit: result.value !== null,
-    contentLength: result.value?.length ?? null,
-    versionstamp: result.versionstamp,
-  });
+  const outcome = result.value === null
+    ? "miss"
+    : `hit, ${result.value.length} chars`;
+  logKv("get", "draft", format, id, outcome);
   return result.value;
 }
 
-function logKv(operation: string, details: Record<string, unknown>): void {
-  console.info(`[kv] ${operation}`, { ...KV_LOG_CONTEXT, ...details });
+function logKv(
+  operation: "get" | "set",
+  entry: string,
+  format: Format,
+  id: string,
+  outcome?: string,
+): void {
+  console.info(
+    `[kv] ${operation} ${entry} ${format}/${id}${
+      outcome === undefined ? "" : `: ${outcome}`
+    }`,
+  );
 }
