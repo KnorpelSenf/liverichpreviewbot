@@ -57,6 +57,18 @@ bot.command(
   (ctx) => sendEditor(ctx, "markdown", DEFAULT_MARKDOWN),
 );
 bot.command("blocks", (ctx) => sendEditor(ctx, "blocks", DEFAULT_BLOCKS));
+bot.on(":file", async (ctx) => {
+  const m = ctx.msg;
+  const fileId =
+    (m.photo !== undefined ? m.photo[m.photo.length - 1] : m.animation ??
+      m.audio ??
+      m.document ??
+      m.video ??
+      m.video_note ??
+      m.voice ??
+      m.sticker)?.file_id;
+  await ctx.send(`This file has file_id ${fileId}for me.`);
+});
 bot.on("message", (ctx) => ctx.sendMessage("Send /help for instructions."));
 
 async function sendEditor(
