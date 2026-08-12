@@ -28,10 +28,7 @@ bot.on("message:text", async (ctx) => {
     reply_markup: new InlineKeyboard().webApp("edit", miniAppUrl.toString()),
   });
 
-  await Promise.all([
-    saveMessageIdentifiers(id, msg.chat.id, msg.message_id),
-    saveText(id, html),
-  ]);
+  await saveMessageIdentifiers(id, msg.chat.id, msg.message_id);
 });
 
 const app = new Hono();
@@ -54,13 +51,16 @@ app.post("/api/text", async (ctx) => {
     return ctx.json({ error: "Expected a valid UUID." }, 400);
   }
 
-  const text = await loadText(body.id);
-  if (text === null) {
-    return ctx.json({ error: "Text not found." }, 404);
+  const [identifiers, text] = await Promise.all([
+    loadMessageIdentifiers(body.id),
+    loadText(body.id),
+  ]);
+  if (identifiers === null) {
+    return ctx.json({ error: "Message not found." }, 404);
   }
 
   ctx.header("Cache-Control", "no-store");
-  return ctx.json({ text });
+  return ctx.json({ text: text ?? DEFAULT_TEXT });
 });
 
 app.put("/api/text", async (ctx) => {
