@@ -3,6 +3,7 @@ import { html } from "@hono/hono/html";
 import { Bot, InlineKeyboard, webhookAdapters } from "grammy";
 
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
+await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
 
