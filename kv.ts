@@ -6,6 +6,7 @@ interface MessageIdentifiers {
 export type Format = "html" | "markdown" | "blocks";
 
 const kv = await Deno.openKv();
+const KV_PREFIX = "liverichpreviewbot";
 
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -19,7 +20,7 @@ export async function saveMessageIdentifiers(
   messageId: number,
 ): Promise<void> {
   const identifiers: MessageIdentifiers = { chatId, messageId };
-  await kv.set([format, "messageIdentifiers", id], identifiers);
+  await kv.set([KV_PREFIX, format, "messageIdentifiers", id], identifiers);
 }
 
 export async function loadMessageIdentifiers(
@@ -27,6 +28,7 @@ export async function loadMessageIdentifiers(
   id: string,
 ): Promise<MessageIdentifiers | null> {
   const result = await kv.get<MessageIdentifiers>([
+    KV_PREFIX,
     format,
     "messageIdentifiers",
     id,
@@ -39,13 +41,13 @@ export async function saveDraft(
   id: string,
   content: string,
 ): Promise<void> {
-  await kv.set([format, "draft", id], content);
+  await kv.set([KV_PREFIX, format, "draft", id], content);
 }
 
 export async function loadDraft(
   format: Format,
   id: string,
 ): Promise<string | null> {
-  const result = await kv.get<string>([format, "draft", id]);
+  const result = await kv.get<string>([KV_PREFIX, format, "draft", id]);
   return result.value;
 }
