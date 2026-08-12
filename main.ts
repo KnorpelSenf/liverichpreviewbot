@@ -1,103 +1,144 @@
 import { Hono } from "@hono/hono";
-import { Bot, InlineKeyboard, webhookAdapters } from "grammy";
 import {
+  Bot,
+  type CommandContext,
+  type Context,
+  InlineKeyboard,
+  webhookAdapters,
+} from "grammy";
+import {
+  type Format,
   isUuid,
+  loadDraft,
   loadMessageIdentifiers,
-  loadText,
+  saveDraft,
   saveMessageIdentifiers,
-  saveText,
 } from "./kv.ts";
 import { renderMiniApp } from "./mini_app.ts";
 
-export const DEFAULT_TEXT = `<h1>New HTML message</h1>
+export const DEFAULT_HTML = `<h1>New HTML message</h1>
 
 <p>Edit me!</p>`;
+
+export const DEFAULT_MARKDOWN = `# New Markdown message
+
+Edit me!`;
 
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
 await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
 
-bot.on("message:text", async (ctx) => {
-  const html = DEFAULT_TEXT;
+bot.command("html", (ctx) => sendEditor(ctx, "html", DEFAULT_HTML));
+bot.command(
+  ["markdown", "md"],
+  (ctx) => sendEditor(ctx, "markdown", DEFAULT_MARKDOWN),
+);
+
+async function sendEditor(
+  ctx: CommandContext<Context>,
+  format: Format,
+  content: string,
+): Promise<void> {
   const id = crypto.randomUUID();
   const miniAppUrl = new URL(url);
   miniAppUrl.searchParams.set("id", id);
+  miniAppUrl.searchParams.set("format", format);
 
-  const msg = await ctx.sendRichMessage({ html }, {
+  const richMessage = format === "html"
+    ? { html: content }
+    : { markdown: content };
+  const msg = await ctx.sendRichMessage(richMessage, {
     reply_markup: new InlineKeyboard().webApp("edit", miniAppUrl.toString()),
   });
 
-  await saveMessageIdentifiers(id, msg.chat.id, msg.message_id);
-});
+  await saveMessageIdentifiers(format, id, msg.chat.id, msg.message_id);
+}
 
 const app = new Hono();
 
 app.get("/", (ctx) => ctx.html(renderMiniApp()));
 
-app.post("/api/text", async (ctx) => {
-  let body: unknown;
+registerFormatApi("html", DEFAULT_HTML);
+registerFormatApi("markdown", DEFAULT_MARKDOWN);
 
+function registerFormatApi(format: Format, defaultContent: string): void {
+  const endpoint = `/api/${format}`;
+  const displayName = format === "html" ? "HTML" : "Markdown";
+
+  app.post(endpoint, async (ctx) => {
+    const body = await readJsonObject(ctx.req.raw);
+    if (body === null) {
+      return ctx.json({ error: "Expected a JSON request body." }, 400);
+    }
+    if (typeof body.id !== "string" || !isUuid(body.id)) {
+      return ctx.json({ error: "Expected a valid UUID." }, 400);
+    }
+
+    const [identifiers, draft] = await Promise.all([
+      loadMessageIdentifiers(format, body.id),
+      loadDraft(format, body.id),
+    ]);
+    if (identifiers === null) {
+      return ctx.json({ error: "Message not found." }, 404);
+    }
+
+    ctx.header("Cache-Control", "no-store");
+    return ctx.json({ [format]: draft ?? defaultContent });
+  });
+
+  app.put(endpoint, async (ctx) => {
+    const body = await readJsonObject(ctx.req.raw);
+    if (body === null) {
+      return ctx.json({ error: "Expected a JSON request body." }, 400);
+    }
+
+    const content = body[format];
+    if (
+      typeof body.id !== "string" || !isUuid(body.id) ||
+      typeof content !== "string"
+    ) {
+      return ctx.json(
+        { error: `Expected a valid UUID and ${displayName}.` },
+        400,
+      );
+    }
+
+    const identifiers = await loadMessageIdentifiers(format, body.id);
+    if (identifiers === null) {
+      return ctx.json({ error: "Message not found." }, 404);
+    }
+
+    await saveDraft(format, body.id, content);
+    const richMessage = format === "html"
+      ? { html: content }
+      : { markdown: content };
+    try {
+      await bot.api.editMessageText(
+        identifiers.chatId,
+        identifiers.messageId,
+        richMessage,
+      );
+    } catch (err) {
+      console.error(err);
+    }
+
+    return ctx.body(null, 204);
+  });
+}
+
+async function readJsonObject(
+  request: Request,
+): Promise<Record<string, unknown> | null> {
   try {
-    body = await ctx.req.json();
+    const body: unknown = await request.json();
+    return typeof body === "object" && body !== null
+      ? body as Record<string, unknown>
+      : null;
   } catch {
-    return ctx.json({ error: "Expected a JSON request body." }, 400);
+    return null;
   }
-
-  if (
-    typeof body !== "object" || body === null || !("id" in body) ||
-    typeof body.id !== "string" || !isUuid(body.id)
-  ) {
-    return ctx.json({ error: "Expected a valid UUID." }, 400);
-  }
-
-  const [identifiers, text] = await Promise.all([
-    loadMessageIdentifiers(body.id),
-    loadText(body.id),
-  ]);
-  if (identifiers === null) {
-    return ctx.json({ error: "Message not found." }, 404);
-  }
-
-  ctx.header("Cache-Control", "no-store");
-  return ctx.json({ text: text ?? DEFAULT_TEXT });
-});
-
-app.put("/api/text", async (ctx) => {
-  let body: unknown;
-
-  try {
-    body = await ctx.req.json();
-  } catch {
-    return ctx.json({ error: "Expected a JSON request body." }, 400);
-  }
-
-  if (
-    typeof body !== "object" || body === null || !("id" in body) ||
-    typeof body.id !== "string" || !isUuid(body.id) || !("text" in body) ||
-    typeof body.text !== "string"
-  ) {
-    return ctx.json({ error: "Expected a valid UUID and text." }, 400);
-  }
-
-  const identifiers = await loadMessageIdentifiers(body.id);
-  if (identifiers === null) {
-    return ctx.json({ error: "Message not found." }, 404);
-  }
-
-  await saveText(body.id, body.text);
-  try {
-    await bot.api.editMessageText(
-      identifiers.chatId,
-      identifiers.messageId,
-      { html: body.text },
-    );
-  } catch (err) {
-    console.error(err);
-  }
-
-  return ctx.body(null, 204);
-});
+}
 
 app.post("/", webhookAdapters.hono(bot));
 

@@ -38,25 +38,31 @@ export function renderMiniApp() {
       <body>
         <textarea
           id="editor"
-          aria-label="Text editor"
+          aria-label="Content editor"
           spellcheck="false"
           disabled
         ></textarea>
         <script>
           const editor = document.querySelector("#editor");
           const miniApp = window.Telegram.WebApp;
-          const id = new URL(window.location.href).searchParams.get("id");
+          const searchParams = new URL(window.location.href).searchParams;
+          const id = searchParams.get("id");
+          const format = searchParams.get("format");
           let saveTimer;
           let saveQueue = Promise.resolve();
 
           miniApp.ready();
 
-          async function loadText() {
+          async function loadContent() {
             if (!id) {
               throw new Error("The Mini App URL is missing its document ID.");
             }
 
-            const response = await fetch("/api/text", {
+            if (format !== "html" && format !== "markdown") {
+              throw new Error("The Mini App URL has an invalid format.");
+            }
+
+            const response = await fetch("/api/" + format, {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ id }),
@@ -64,24 +70,24 @@ export function renderMiniApp() {
 
             if (!response.ok) {
               throw new Error(
-                "Could not load the text (" + response.status + ").",
+                "Could not load the content (" + response.status + ").",
               );
             }
 
             const data = await response.json();
-            editor.value = data.text;
+            editor.value = data[format];
           }
 
-          async function saveText(text) {
-            const response = await fetch("/api/text", {
+          async function saveContent(content) {
+            const response = await fetch("/api/" + format, {
               method: "PUT",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ id, text }),
+              body: JSON.stringify({ id, [format]: content }),
             });
 
             if (!response.ok) {
               throw new Error(
-                "Could not save the text (" + response.status + ").",
+                "Could not save the content (" + response.status + ").",
               );
             }
           }
@@ -89,15 +95,15 @@ export function renderMiniApp() {
           editor.addEventListener("input", () => {
             clearTimeout(saveTimer);
             saveTimer = setTimeout(() => {
-              const text = editor.value;
+              const content = editor.value;
               saveQueue = saveQueue
                 .catch(() => {})
-                .then(() => saveText(text))
+                .then(() => saveContent(content))
                 .catch((error) => console.error(error));
             }, 1000);
           });
 
-          loadText()
+          loadContent()
             .catch((error) => {
               editor.placeholder = error.message;
             })
