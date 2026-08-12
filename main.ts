@@ -15,6 +15,7 @@ import {
   saveDraft,
   saveMessageIdentifiers,
 } from "./kv.ts";
+import { MAX_TEXT_LENGTH } from "./limits.ts";
 import { renderMiniApp } from "./mini_app.ts";
 
 const EDIT_BUTTON = "edit";
@@ -137,6 +138,14 @@ function registerFormatApi(format: Format, defaultContent: string): void {
       return ctx.json(
         { error: `Expected a valid UUID and ${displayName}.` },
         400,
+      );
+    }
+    if (content.length > MAX_TEXT_LENGTH) {
+      return ctx.json(
+        {
+          error: `${displayName} cannot exceed ${MAX_TEXT_LENGTH} characters.`,
+        },
+        413,
       );
     }
 

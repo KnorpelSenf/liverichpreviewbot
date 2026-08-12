@@ -1,4 +1,5 @@
 import { html } from "@hono/hono/html";
+import { MAX_TEXT_LENGTH } from "./limits.ts";
 
 export function renderMiniApp() {
   return html`
@@ -46,6 +47,7 @@ export function renderMiniApp() {
         <textarea
           id="editor"
           aria-label="Content editor"
+          maxlength="${MAX_TEXT_LENGTH}"
           spellcheck="false"
           disabled
         ></textarea>
@@ -55,6 +57,7 @@ export function renderMiniApp() {
           const searchParams = new URL(window.location.href).searchParams;
           const id = searchParams.get("id");
           const format = searchParams.get("format");
+          const maxTextLength = ${MAX_TEXT_LENGTH};
           let saveTimer;
           let saveQueue = Promise.resolve();
 
@@ -90,13 +93,18 @@ export function renderMiniApp() {
           }
 
           async function saveContent(content) {
+            if (content.length > maxTextLength) {
+              editor.setAttribute("aria-invalid", "true");
+              return;
+            }
+
+            editor.removeAttribute("aria-invalid");
             if (format === "blocks") {
               try {
                 const blocks = JSON.parse(content);
                 if (!Array.isArray(blocks)) {
                   throw new TypeError("Blocks must be a JSON array.");
                 }
-                editor.removeAttribute("aria-invalid");
               } catch {
                 editor.setAttribute("aria-invalid", "true");
                 return;
