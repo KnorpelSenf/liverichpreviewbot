@@ -13,9 +13,16 @@ export function renderMiniApp() {
             color-scheme: light dark;
           }
 
+          html,
           body {
+            height: 100%;
+          }
+
+          body {
+            box-sizing: border-box;
             margin: 0;
             padding: 12px;
+            height: var(--tg-viewport-height, 100dvh);
             background: var(--tg-theme-bg-color, Canvas);
             color: var(--tg-theme-text-color, CanvasText);
           }
@@ -23,9 +30,9 @@ export function renderMiniApp() {
           textarea {
             box-sizing: border-box;
             width: 100%;
-            height: 12rem;
+            height: 100%;
             padding: 8px;
-            resize: vertical;
+            resize: none;
             border: 1px solid var(--tg-theme-hint-color, GrayText);
             border-radius: 6px;
             background: var(--tg-theme-secondary-bg-color, Field);
@@ -51,6 +58,7 @@ export function renderMiniApp() {
           let saveTimer;
           let saveQueue = Promise.resolve();
 
+          miniApp.expand();
           miniApp.ready();
 
           async function loadContent() {
