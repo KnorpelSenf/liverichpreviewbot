@@ -67,9 +67,7 @@ async function sendEditor(
   const richMessage = createRichMessage(format, content);
   if (typeof richMessage === "string") throw new Error("cannot happen");
   // create message in database before letting anyone edit it
-  const msg = await ctx.sendRichMessage(richMessage, {
-    reply_markup: new InlineKeyboard().text("✎", ""),
-  });
+  const msg = await ctx.sendRichMessage(richMessage);
 
   await saveMessageIdentifiers(format, id, msg.chat.id, msg.message_id);
   await ctx.api.editMessageReplyMarkup(
