@@ -55,7 +55,7 @@ export async function saveDraft(
   content: string,
 ): Promise<void> {
   const key = [KV_PREFIX, format, "draft", id];
-  await kv.set(key, content);
+  await kv.set(key, content, { expireIn:  1000 * 60 * 60 * 24 * 90 }); // 90 days
   logKv("set", "draft", format, id, `${content.length} chars`);
 }
 
