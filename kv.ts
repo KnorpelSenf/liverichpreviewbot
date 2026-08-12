@@ -9,7 +9,9 @@ const kv = await Deno.openKv();
 const KV_PREFIX = "liverichpreviewbot";
 const KV_LOG_CONTEXT = {
   app: Deno.env.get("DENO_DEPLOY_APP_SLUG") ?? "local",
-  revision: Deno.env.get("DENO_DEPLOY_REVISION_ID") ?? "local",
+  revision: Deno.env.get("DENO_DEPLOY_BUILD_ID") ?? "local",
+  deployment: Deno.env.get("DENO_DEPLOYMENT_ID") ?? "local",
+  timeline: Deno.env.get("DENO_TIMELINE") ?? "local",
 };
 
 console.info("[kv] opened", KV_LOG_CONTEXT);
