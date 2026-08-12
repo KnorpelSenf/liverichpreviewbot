@@ -67,7 +67,9 @@ bot.on(":file", async (ctx) => {
       m.video_note ??
       m.voice ??
       m.sticker)?.file_id;
-  await ctx.send(`This file has file_id ${fileId}for me.`);
+  await ctx.sendMessage(`This file has file_id ${fileId} for me.`, {
+    entities: [{ type: "code", offset: 22, length: fileId.length }],
+  });
 });
 bot.on("message", (ctx) => ctx.sendMessage("Send /help for instructions."));
 
