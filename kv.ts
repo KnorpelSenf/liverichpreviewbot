@@ -13,9 +13,9 @@ export function isUuid(value: string): boolean {
 
 export async function saveText(
   id: string,
-  text: string,
   chatId: number,
   messageId: number,
+  text: string,
 ): Promise<void> {
   const record: TextRecord = { text, chatId, messageId };
   await kv.set(["texts", id], record);

@@ -3,21 +3,26 @@ import { Bot, InlineKeyboard, webhookAdapters } from "grammy";
 import { isUuid, loadText, saveText } from "./kv.ts";
 import { renderMiniApp } from "./mini_app.ts";
 
+export const DEFAULT_TEXT = `<h1>New HTML message</h1>
+
+<p>Edit me!</p>`;
+
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
 await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
 
 bot.on("message:text", async (ctx) => {
+  const html = DEFAULT_TEXT;
   const id = crypto.randomUUID();
   const miniAppUrl = new URL(url);
   miniAppUrl.searchParams.set("id", id);
 
-  const msg = await ctx.sendMessage("reply", {
+  const msg = await ctx.sendRichMessage({ html }, {
     reply_markup: new InlineKeyboard().webApp("edit", miniAppUrl.toString()),
   });
 
-  await saveText(id, ctx.msg.text, msg.chat.id, msg.message_id);
+  await saveText(id, msg.chat.id, msg.message_id, html);
 });
 
 const app = new Hono();
