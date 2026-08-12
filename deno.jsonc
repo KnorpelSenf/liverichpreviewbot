@@ -1,4 +1,8 @@
 {
+  "unstable": ["kv"],
+  "fmt": {
+    "exclude": ["docs/"]
+  },
   "tasks": {
     "dev": "deno --watch --tunnel -EN main.ts",
     "ok": "deno fmt --check && deno lint && deno check",
