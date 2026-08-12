@@ -5,6 +5,7 @@ import {
   type CommandContext,
   type Context,
   InlineKeyboard,
+  type SendData,
   webhookAdapters,
 } from "grammy";
 import {
@@ -49,11 +50,14 @@ const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
 
 const HELP_TEXT = "Create a message with /html, /markdown, or /blocks.";
-const ABOUT_TEXT = `By @KnorpelSenf
+const ABOUT_TEXT: SendData = {
+  text: `By @KnorpelSenf
 
 Proudly powered by grammy.dev
 
-Source code: https://github.com/KnorpelSenf/liverichpreviewbot`;
+Source code: https://github.com/KnorpelSenf/liverichpreviewbot`,
+  link_preview_options: { is_disabled: true },
+};
 
 bot.command(["start", "help"], (ctx) => ctx.sendMessage(HELP_TEXT));
 bot.command("html", (ctx) => sendEditor(ctx, "html", DEFAULT_HTML));
