@@ -17,6 +17,7 @@ import {
 } from "./kv.ts";
 import { renderMiniApp } from "./mini_app.ts";
 
+const EDIT_BUTTON = "edit";
 export const DEFAULT_HTML = `<h1>New HTML message</h1>
 
 <p>Edit me!</p>`;
@@ -81,7 +82,7 @@ function createEditorKeyboard(format: Format, id: string): InlineKeyboard {
   const miniAppUrl = new URL(url);
   miniAppUrl.searchParams.set("id", id);
   miniAppUrl.searchParams.set("format", format);
-  return new InlineKeyboard().webApp("✎", miniAppUrl.toString());
+  return new InlineKeyboard().webApp(EDIT_BUTTON, miniAppUrl.toString());
 }
 
 const app = new Hono();
