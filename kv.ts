@@ -1,5 +1,4 @@
-interface TextRecord {
-  text: string;
+interface MessageIdentifiers {
   chatId: number;
   messageId: number;
 }
@@ -11,17 +10,27 @@ export function isUuid(value: string): boolean {
     .test(value);
 }
 
-export async function saveText(
+export async function saveMessageIdentifiers(
   id: string,
   chatId: number,
   messageId: number,
-  text: string,
 ): Promise<void> {
-  const record: TextRecord = { text, chatId, messageId };
-  await kv.set(["texts", id], record);
+  const identifiers: MessageIdentifiers = { chatId, messageId };
+  await kv.set(["messageIdentifiers", id], identifiers);
+}
+
+export async function loadMessageIdentifiers(
+  id: string,
+): Promise<MessageIdentifiers | null> {
+  const result = await kv.get<MessageIdentifiers>(["messageIdentifiers", id]);
+  return result.value;
+}
+
+export async function saveText(id: string, text: string): Promise<void> {
+  await kv.set(["texts", id], text);
 }
 
 export async function loadText(id: string): Promise<string | null> {
-  const result = await kv.get<TextRecord>(["texts", id]);
-  return result.value?.text ?? null;
+  const result = await kv.get<string>(["texts", id]);
+  return result.value;
 }

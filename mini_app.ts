@@ -45,12 +45,13 @@ export function renderMiniApp() {
         <script>
           const editor = document.querySelector("#editor");
           const miniApp = window.Telegram.WebApp;
+          const id = new URL(window.location.href).searchParams.get("id");
+          let saveTimer;
+          let saveQueue = Promise.resolve();
 
           miniApp.ready();
 
           async function loadText() {
-            const id = new URL(window.location.href).searchParams.get("id");
-
             if (!id) {
               throw new Error("The Mini App URL is missing its document ID.");
             }
@@ -70,6 +71,31 @@ export function renderMiniApp() {
             const data = await response.json();
             editor.value = data.text;
           }
+
+          async function saveText(text) {
+            const response = await fetch("/api/text", {
+              method: "PUT",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ id, text }),
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                "Could not save the text (" + response.status + ").",
+              );
+            }
+          }
+
+          editor.addEventListener("input", () => {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+              const text = editor.value;
+              saveQueue = saveQueue
+                .catch(() => {})
+                .then(() => saveText(text))
+                .catch((error) => console.error(error));
+            }, 1000);
+          });
 
           loadText()
             .catch((error) => {

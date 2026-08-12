@@ -1,6 +1,12 @@
 import { Hono } from "@hono/hono";
 import { Bot, InlineKeyboard, webhookAdapters } from "grammy";
-import { isUuid, loadText, saveText } from "./kv.ts";
+import {
+  isUuid,
+  loadMessageIdentifiers,
+  loadText,
+  saveMessageIdentifiers,
+  saveText,
+} from "./kv.ts";
 import { renderMiniApp } from "./mini_app.ts";
 
 export const DEFAULT_TEXT = `<h1>New HTML message</h1>
@@ -22,7 +28,10 @@ bot.on("message:text", async (ctx) => {
     reply_markup: new InlineKeyboard().webApp("edit", miniAppUrl.toString()),
   });
 
-  await saveText(id, msg.chat.id, msg.message_id, html);
+  await Promise.all([
+    saveMessageIdentifiers(id, msg.chat.id, msg.message_id),
+    saveText(id, html),
+  ]);
 });
 
 const app = new Hono();
@@ -52,6 +61,42 @@ app.post("/api/text", async (ctx) => {
 
   ctx.header("Cache-Control", "no-store");
   return ctx.json({ text });
+});
+
+app.put("/api/text", async (ctx) => {
+  let body: unknown;
+
+  try {
+    body = await ctx.req.json();
+  } catch {
+    return ctx.json({ error: "Expected a JSON request body." }, 400);
+  }
+
+  if (
+    typeof body !== "object" || body === null || !("id" in body) ||
+    typeof body.id !== "string" || !isUuid(body.id) || !("text" in body) ||
+    typeof body.text !== "string"
+  ) {
+    return ctx.json({ error: "Expected a valid UUID and text." }, 400);
+  }
+
+  const identifiers = await loadMessageIdentifiers(body.id);
+  if (identifiers === null) {
+    return ctx.json({ error: "Message not found." }, 404);
+  }
+
+  await saveText(body.id, body.text);
+  try {
+    await bot.api.editMessageText(
+      identifiers.chatId,
+      identifiers.messageId,
+      { html: body.text },
+    );
+  } catch (err) {
+    console.error(err);
+  }
+
+  return ctx.body(null, 204);
 });
 
 app.post("/", webhookAdapters.hono(bot));
