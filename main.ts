@@ -45,12 +45,16 @@ await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
 
+const HELP_TEXT = "Create a message with /html, /markdown, or /blocks.";
+
+bot.command(["start", "help"], (ctx) => ctx.sendMessage(HELP_TEXT));
 bot.command("html", (ctx) => sendEditor(ctx, "html", DEFAULT_HTML));
 bot.command(
   ["markdown", "md"],
   (ctx) => sendEditor(ctx, "markdown", DEFAULT_MARKDOWN),
 );
 bot.command("blocks", (ctx) => sendEditor(ctx, "blocks", DEFAULT_BLOCKS));
+bot.on("message", (ctx) => ctx.sendMessage("Send /help for instructions."));
 
 async function sendEditor(
   ctx: CommandContext<Context>,
