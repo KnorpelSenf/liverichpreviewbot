@@ -65,18 +65,24 @@ async function sendEditor(
 
   const richMessage = createRichMessage(format, content);
   if (typeof richMessage === "string") throw new Error("cannot happen");
+  // create message in database before letting anyone edit it
   const msg = await ctx.sendRichMessage(richMessage, {
-    reply_markup: createEditorKeyboard(format, id),
+    reply_markup: new InlineKeyboard().text("✎", ""),
   });
 
   await saveMessageIdentifiers(format, id, msg.chat.id, msg.message_id);
+  await ctx.api.editMessageReplyMarkup(
+    msg.chat.id,
+    msg.message_id,
+    createEditorKeyboard(format, id),
+  );
 }
 
 function createEditorKeyboard(format: Format, id: string): InlineKeyboard {
   const miniAppUrl = new URL(url);
   miniAppUrl.searchParams.set("id", id);
   miniAppUrl.searchParams.set("format", format);
-  return new InlineKeyboard().webApp("edit", miniAppUrl.toString());
+  return new InlineKeyboard().webApp("✎", miniAppUrl.toString());
 }
 
 const app = new Hono();
