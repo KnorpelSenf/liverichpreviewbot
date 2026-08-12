@@ -1,4 +1,5 @@
 import { Hono } from "@hono/hono";
+import { logger } from "@hono/hono/logger";
 import {
   Bot,
   type CommandContext,
@@ -86,6 +87,7 @@ function createEditorKeyboard(format: Format, id: string): InlineKeyboard {
 }
 
 const app = new Hono();
+app.use(logger());
 
 app.get("/", (ctx) => ctx.html(renderMiniApp()));
 
