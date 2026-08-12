@@ -24,6 +24,22 @@ export const DEFAULT_MARKDOWN = `# New Markdown message
 
 Edit me!`;
 
+export const DEFAULT_BLOCKS = JSON.stringify(
+  [
+    {
+      type: "heading",
+      text: "New Blocks message",
+      size: 1,
+    },
+    {
+      type: "paragraph",
+      text: "Edit me!",
+    },
+  ],
+  null,
+  2,
+);
+
 const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
 await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
@@ -34,6 +50,7 @@ bot.command(
   ["markdown", "md"],
   (ctx) => sendEditor(ctx, "markdown", DEFAULT_MARKDOWN),
 );
+bot.command("blocks", (ctx) => sendEditor(ctx, "blocks", DEFAULT_BLOCKS));
 
 async function sendEditor(
   ctx: CommandContext<Context>,
@@ -45,9 +62,7 @@ async function sendEditor(
   miniAppUrl.searchParams.set("id", id);
   miniAppUrl.searchParams.set("format", format);
 
-  const richMessage = format === "html"
-    ? { html: content }
-    : { markdown: content };
+  const richMessage = createRichMessage(format, content);
   const msg = await ctx.sendRichMessage(richMessage, {
     reply_markup: new InlineKeyboard().webApp("edit", miniAppUrl.toString()),
   });
@@ -61,10 +76,15 @@ app.get("/", (ctx) => ctx.html(renderMiniApp()));
 
 registerFormatApi("html", DEFAULT_HTML);
 registerFormatApi("markdown", DEFAULT_MARKDOWN);
+registerFormatApi("blocks", DEFAULT_BLOCKS);
 
 function registerFormatApi(format: Format, defaultContent: string): void {
   const endpoint = `/api/${format}`;
-  const displayName = format === "html" ? "HTML" : "Markdown";
+  const displayName = format === "html"
+    ? "HTML"
+    : format === "markdown"
+    ? "Markdown"
+    : "blocks JSON";
 
   app.post(endpoint, async (ctx) => {
     const body = await readJsonObject(ctx.req.raw);
@@ -109,10 +129,8 @@ function registerFormatApi(format: Format, defaultContent: string): void {
       return ctx.json({ error: "Message not found." }, 404);
     }
 
+    const richMessage = createRichMessage(format, content);
     await saveDraft(format, body.id, content);
-    const richMessage = format === "html"
-      ? { html: content }
-      : { markdown: content };
     try {
       await bot.api.editMessageText(
         identifiers.chatId,
@@ -125,6 +143,17 @@ function registerFormatApi(format: Format, defaultContent: string): void {
 
     return ctx.body(null, 204);
   });
+}
+
+function createRichMessage(format: Format, content: string) {
+  if (format === "html") return { html: content };
+  if (format === "markdown") return { markdown: content };
+
+  const blocks = JSON.parse(content);
+  if (!Array.isArray(blocks)) {
+    return "Blocks must be a JSON array";
+  }
+  return { blocks };
 }
 
 async function readJsonObject(

@@ -3,7 +3,7 @@ interface MessageIdentifiers {
   messageId: number;
 }
 
-export type Format = "html" | "markdown";
+export type Format = "html" | "markdown" | "blocks";
 
 const kv = await Deno.openKv();
 

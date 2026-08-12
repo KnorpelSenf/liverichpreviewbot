@@ -58,7 +58,10 @@ export function renderMiniApp() {
               throw new Error("The Mini App URL is missing its document ID.");
             }
 
-            if (format !== "html" && format !== "markdown") {
+            if (
+              format !== "html" && format !== "markdown" &&
+              format !== "blocks"
+            ) {
               throw new Error("The Mini App URL has an invalid format.");
             }
 
@@ -79,6 +82,19 @@ export function renderMiniApp() {
           }
 
           async function saveContent(content) {
+            if (format === "blocks") {
+              try {
+                const blocks = JSON.parse(content);
+                if (!Array.isArray(blocks)) {
+                  throw new TypeError("Blocks must be a JSON array.");
+                }
+                editor.removeAttribute("aria-invalid");
+              } catch {
+                editor.setAttribute("aria-invalid", "true");
+                return;
+              }
+            }
+
             const response = await fetch("/api/" + format, {
               method: "PUT",
               headers: { "content-type": "application/json" },
