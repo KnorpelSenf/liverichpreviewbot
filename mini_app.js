@@ -52,7 +52,11 @@ function isValidContent(content) {
 
 function updateValidity(content) {
   const isValid = isValidContent(content);
-  editor.toggleAttribute("aria-invalid", !isValid);
+  if (isValid) {
+    editor.removeAttribute("aria-invalid");
+  } else {
+    editor.setAttribute("aria-invalid", "true");
+  }
   return isValid;
 }
 
