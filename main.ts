@@ -16,11 +16,11 @@ import {
   saveDraft,
   saveMessageIdentifiers,
 } from "./kv.ts";
-import { MAX_TEXT_LENGTH } from "./limits.ts";
+import miniAppHtml from "./mini_app.html" with { type: "text" };
 import miniAppScript from "./mini_app.js" with { type: "text" };
-import { renderMiniApp } from "./mini_app.ts";
 
 const EDIT_BUTTON = "edit";
+const MAX_TEXT_LENGTH = 32 * 1024;
 export const DEFAULT_HTML = `<h1>New HTML message</h1>
 
 <p>Edit me!</p>`;
@@ -115,7 +115,7 @@ function createEditorKeyboard(format: Format, id: string): InlineKeyboard {
 const app = new Hono();
 app.use(logger());
 
-app.get("/", (ctx) => ctx.html(renderMiniApp()));
+app.get("/", (ctx) => ctx.html(miniAppHtml));
 app.get("/mini_app.js", (ctx) => {
   ctx.header("Content-Type", "text/javascript; charset=UTF-8");
   return ctx.body(miniAppScript);
