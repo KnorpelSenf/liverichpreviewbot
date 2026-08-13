@@ -17,6 +17,7 @@ import {
   saveMessageIdentifiers,
 } from "./kv.ts";
 import { MAX_TEXT_LENGTH } from "./limits.ts";
+import miniAppScript from "./mini_app.js" with { type: "text" };
 import { renderMiniApp } from "./mini_app.ts";
 
 const EDIT_BUTTON = "edit";
@@ -115,6 +116,10 @@ const app = new Hono();
 app.use(logger());
 
 app.get("/", (ctx) => ctx.html(renderMiniApp()));
+app.get("/mini_app.js", (ctx) => {
+  ctx.header("Content-Type", "text/javascript; charset=UTF-8");
+  return ctx.body(miniAppScript);
+});
 
 registerFormatApi("html", DEFAULT_HTML);
 registerFormatApi("markdown", DEFAULT_MARKDOWN);
