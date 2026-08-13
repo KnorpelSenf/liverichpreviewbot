@@ -1,4 +1,5 @@
 const editor = document.querySelector("#editor");
+const statusLabel = document.querySelector("#status");
 const miniApp = globalThis.Telegram.WebApp;
 const searchParams = new URL(globalThis.location.href).searchParams;
 const id = searchParams.get("id");
@@ -6,6 +7,7 @@ const format = searchParams.get("format");
 const maxTextLength = editor.maxLength;
 let saveTimer;
 let saveQueue = Promise.resolve();
+let editRevision = 0;
 
 miniApp.expand();
 miniApp.ready();
@@ -33,25 +35,34 @@ async function loadContent() {
   editor.value = data[format];
 }
 
-function isValidContent(content) {
-  if (content.length === 0 || content.length > maxTextLength) {
-    return false;
+function classifyContent(content) {
+  if (content.length === 0) {
+    return "empty";
   }
 
   if (format === "blocks") {
     try {
       const blocks = JSON.parse(content);
-      return Array.isArray(blocks) && blocks.length > 0;
+      if (!Array.isArray(blocks)) return "invalid json";
+      if (blocks.length === 0) return "empty";
     } catch {
-      return false;
+      return "invalid json";
     }
   }
 
-  return format === "html" || format === "markdown";
+  if (
+    content.length <= maxTextLength &&
+    (format === "html" || format === "markdown" || format === "blocks")
+  ) {
+    return "valid";
+  }
+
+  return "invalid";
 }
 
 function updateValidity(content) {
-  const isValid = isValidContent(content);
+  const contentState = classifyContent(content);
+  const isValid = contentState === "valid";
   if (isValid) {
     editor.removeAttribute("aria-invalid");
   } else {
@@ -60,38 +71,77 @@ function updateValidity(content) {
   return isValid;
 }
 
-async function saveContent(content) {
-  if (!updateValidity(content)) return;
+function setStatus(status) {
+  statusLabel.textContent = status;
+}
 
-  const response = await fetch("/api/" + format, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id, [format]: content }),
-  });
+async function saveContent(content, revision) {
+  if (classifyContent(content) !== "valid") return;
 
-  if (!response.ok) {
-    throw new Error("Could not save the content (" + response.status + ").");
+  if (revision === editRevision) setStatus("saving");
+
+  try {
+    const response = await fetch("/api/" + format, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, [format]: content }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        "Could not save the content (" + response.status + ").",
+      );
+    }
+
+    if (revision === editRevision) setStatus("idle");
+  } catch (error) {
+    if (revision === editRevision) setStatus("network error");
+    throw error;
   }
 }
 
 editor.addEventListener("input", () => {
   clearTimeout(saveTimer);
+  editRevision += 1;
+
   const content = editor.value;
-  if (!updateValidity(content)) return;
+  const revision = editRevision;
+  const contentState = classifyContent(content);
+  const isValid = updateValidity(content);
+
+  if (!isValid) {
+    if (contentState === "empty" || contentState === "invalid json") {
+      setStatus(contentState);
+    }
+    return;
+  }
+
+  setStatus("waiting");
 
   saveTimer = setTimeout(() => {
     saveQueue = saveQueue
       .catch(() => {})
-      .then(() => saveContent(content))
+      .then(() => saveContent(content, revision))
       .catch((error) => console.error(error));
   }, 1000);
 });
 
 loadContent()
+  .then(() => {
+    const contentState = classifyContent(editor.value);
+    if (updateValidity(editor.value)) {
+      setStatus("idle");
+    } else if (contentState === "empty" || contentState === "invalid json") {
+      setStatus(contentState);
+    } else {
+      setStatus("network error");
+    }
+  })
   .catch((error) => {
     editor.placeholder = error.message;
+    updateValidity(editor.value);
+    setStatus("network error");
   })
   .finally(() => {
-    updateValidity(editor.value);
     editor.disabled = false;
   });
