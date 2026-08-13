@@ -44,7 +44,8 @@ export const DEFAULT_BLOCKS = JSON.stringify(
   2,
 );
 
-const bot = new Bot(Deno.env.get("BOT_TOKEN") ?? "");
+const token = Deno.env.get("BOT_TOKEN");
+const bot = new Bot(token ?? "");
 await bot.init();
 const url = Deno.env.get("BOT_ENDPOINT") ??
   (await bot.api.getWebhookInfo()).url;
@@ -219,6 +220,6 @@ async function readJsonObject(
   }
 }
 
-app.post("/", webhookAdapters.hono(bot));
+app.post("/", webhookAdapters.hono(bot, { secretToken: token }));
 
 Deno.serve(app.fetch);
