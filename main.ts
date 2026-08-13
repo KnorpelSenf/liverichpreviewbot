@@ -220,6 +220,9 @@ async function readJsonObject(
   }
 }
 
-app.post("/", webhookAdapters.hono(bot, { secretToken: token }));
+app.post(
+  "/",
+  webhookAdapters.hono(bot, { secretToken: token?.replaceAll(":", "_") }),
+);
 
 Deno.serve(app.fetch);
