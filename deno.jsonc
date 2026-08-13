@@ -6,7 +6,7 @@
   "tasks": {
     "dev": "deno --watch --tunnel -EN main.ts",
     "ok": "deno fmt --check && deno lint && deno check",
-    "setwh": "sh -c 'curl --get --data-urlencode \"url=${1:?Webhook URL is required}\" \"https://api.telegram.org/bot${BOT_TOKEN:?BOT_TOKEN is required}/setwebhook\"' --"
+    "setwh": "sh -c 'token=${BOT_TOKEN:?BOT_TOKEN is required}; curl --get --data-urlencode \"url=${1:?Webhook URL is required}\" --data-urlencode \"secret_token=${token%:*}_${token#*:}\" \"https://api.telegram.org/bot${token}/setwebhook\"' --"
   },
   "imports": {
     "@grammyjs/grammy": "jsr:@grammyjs/grammy@2.0.0-beta.7",
