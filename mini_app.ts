@@ -41,6 +41,10 @@ export function renderMiniApp() {
             font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco,
               Consolas, "Liberation Mono", "Courier New", monospace;
           }
+
+          textarea[aria-invalid="true"] {
+            border: 2px solid red;
+          }
         </style>
       </head>
       <body>
@@ -92,24 +96,31 @@ export function renderMiniApp() {
             editor.value = data[format];
           }
 
-          async function saveContent(content) {
-            if (content.length > maxTextLength) {
-              editor.setAttribute("aria-invalid", "true");
-              return;
+          function isValidContent(content) {
+            if (content.length === 0 || content.length > maxTextLength) {
+              return false;
             }
 
-            editor.removeAttribute("aria-invalid");
             if (format === "blocks") {
               try {
                 const blocks = JSON.parse(content);
-                if (!Array.isArray(blocks)) {
-                  throw new TypeError("Blocks must be a JSON array.");
-                }
+                return Array.isArray(blocks) && blocks.length > 0;
               } catch {
-                editor.setAttribute("aria-invalid", "true");
-                return;
+                return false;
               }
             }
+
+            return format === "html" || format === "markdown";
+          }
+
+          function updateValidity(content) {
+            const isValid = isValidContent(content);
+            editor.toggleAttribute("aria-invalid", !isValid);
+            return isValid;
+          }
+
+          async function saveContent(content) {
+            if (!updateValidity(content)) return;
 
             const response = await fetch("/api/" + format, {
               method: "PUT",
@@ -126,8 +137,10 @@ export function renderMiniApp() {
 
           editor.addEventListener("input", () => {
             clearTimeout(saveTimer);
+            const content = editor.value;
+            if (!updateValidity(content)) return;
+
             saveTimer = setTimeout(() => {
-              const content = editor.value;
               saveQueue = saveQueue
                 .catch(() => {})
                 .then(() => saveContent(content))
@@ -140,6 +153,7 @@ export function renderMiniApp() {
               editor.placeholder = error.message;
             })
             .finally(() => {
+              updateValidity(editor.value);
               editor.disabled = false;
             });
         </script>
