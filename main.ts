@@ -17,7 +17,7 @@ import {
   saveMessageIdentifiers,
 } from "./kv.ts";
 import miniAppHtml from "./mini_app.html" with { type: "text" };
-import miniAppScript from "./mini_app.js" with { type: "text" };
+import syncScript from "./sync.js" with { type: "text" };
 
 const EDIT_BUTTON = "edit";
 const MAX_TEXT_LENGTH = 32 * 1024;
@@ -116,9 +116,9 @@ const app = new Hono();
 app.use(logger());
 
 app.get("/", (ctx) => ctx.html(miniAppHtml));
-app.get("/mini_app.js", (ctx) => {
+app.get("/sync.js", (ctx) => {
   ctx.header("Content-Type", "text/javascript; charset=UTF-8");
-  return ctx.body(miniAppScript);
+  return ctx.body(syncScript);
 });
 
 registerFormatApi("html", DEFAULT_HTML);
