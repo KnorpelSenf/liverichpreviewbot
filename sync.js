@@ -8,6 +8,7 @@ const maxTextLength = editor.maxLength;
 let saveTimer;
 let saveQueue = Promise.resolve();
 let editRevision = 0;
+let lastSyncSuccess;
 
 miniApp.expand();
 miniApp.ready();
@@ -33,6 +34,7 @@ async function loadContent() {
 
   const data = await response.json();
   editor.value = data[format];
+  lastSyncSuccess = editor.value.trim();
 }
 
 function classifyContent(content) {
@@ -78,6 +80,11 @@ function setStatus(status) {
 async function saveContent(content, revision) {
   if (classifyContent(content) !== "valid") return;
 
+  if (content.trim() === lastSyncSuccess) {
+    if (revision === editRevision) setStatus("idle");
+    return;
+  }
+
   if (revision === editRevision) setStatus("saving");
 
   try {
@@ -93,6 +100,7 @@ async function saveContent(content, revision) {
       );
     }
 
+    lastSyncSuccess = content.trim();
     if (revision === editRevision) setStatus("idle");
   } catch (error) {
     if (revision === editRevision) setStatus("network error");
